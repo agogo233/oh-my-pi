@@ -1,6 +1,28 @@
 name: Build standalone binaries (dispatch)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "crates/**"
+      - "scripts/**"
+      - "bazel/**"
+      - "MODULE.bazel"
+      - "MODULE.bazel.lock"
+      - "BUILD.bazel"
+      - ".bazelrc"
+      - ".bazelignore"
+      - ".bazelversion"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rustfmt.toml"
+      - "bun.lock"
+      - "bunfig.toml"
+      - "package.json"
+      - "patches/**"
+      - ".github/**"
   workflow_dispatch:
     inputs:
       build_linux_x64:
