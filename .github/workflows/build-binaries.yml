@@ -98,7 +98,7 @@ jobs:
   build-linux-x64:
     name: "Build: linux-x64"
     needs: [build-native-addons]
-    if: fromJSON(inputs.build_linux_x64)
+    if: ${{ github.event_name != 'workflow_dispatch' || fromJSON(inputs.build_linux_x64) }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -133,7 +133,7 @@ jobs:
   build-linux-musl-x64:
     name: "Build: linux-musl-x64"
     needs: [build-native-addons]
-    if: fromJSON(inputs.build_linux_musl_x64)
+    if: ${{ github.event_name != 'workflow_dispatch' || fromJSON(inputs.build_linux_musl_x64) }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -172,7 +172,7 @@ jobs:
   build-win32-x64:
     name: "Build: win32-x64"
     needs: [build-native-addons]
-    if: fromJSON(inputs.build_win32_x64)
+    if: ${{ github.event_name != 'workflow_dispatch' || fromJSON(inputs.build_win32_x64) }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -204,6 +204,7 @@ jobs:
     needs: [build-linux-x64, build-linux-musl-x64, build-win32-x64]
     if: |
       !cancelled() && (
+        github.event_name != 'workflow_dispatch' ||
         (fromJSON(inputs.build_linux_x64) && needs.build-linux-x64.result == 'success') ||
         (fromJSON(inputs.build_linux_musl_x64) && needs.build-linux-musl-x64.result == 'success') ||
         (fromJSON(inputs.build_win32_x64) && needs.build-win32-x64.result == 'success')
