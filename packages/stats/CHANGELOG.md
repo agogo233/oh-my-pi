@@ -2,6 +2,35 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Dashboard pages refetch only when stats data actually changed, including commits from other omp processes ([#14723](https://github.com/can1357/oh-my-pi/pull/14723) by [@H4vC](https://github.com/H4vC))
+- Sped up session syncs, stats database opening, package import and the `/usage`, models and timeseries endpoints ([#14723](https://github.com/can1357/oh-my-pi/pull/14723) by [@H4vC](https://github.com/H4vC))
+- Trace polls revalidate with `If-None-Match`, so unchanged traces are not re-downloaded ([#14724](https://github.com/can1357/oh-my-pi/pull/14724) by [@H4vC](https://github.com/H4vC))
+- Cancelled abandoned dashboard requests, e.g. large traces when switching sessions or closing a drawer mid-load ([#14724](https://github.com/can1357/oh-my-pi/pull/14724) by [@H4vC](https://github.com/H4vC))
+- Reduced dashboard re-rendering during trace timeline hover, pan and zoom ([#14727](https://github.com/can1357/oh-my-pi/pull/14727) by [@H4vC](https://github.com/H4vC))
+
+## [18.7.0] - 2026-10-06
+
+### Fixed
+
+- Fixed Ultrafast turns not being counted toward the Premium Requests statistic.
+- Fixed the desktop stats dashboard menu button so it no longer appears unnecessarily or dims the page without opening navigation.
+
+## [18.6.0] - 2026-10-03
+
+### Fixed
+
+- Fixed the Frustration page splitting DeepSeek V4 provider variants and the V4.1 Flash alias into separate model-version rows ([#14194](https://github.com/can1357/oh-my-pi/issues/14194)).
+
+## [18.5.1] - 2026-10-03
+
+### Fixed
+
+- Fixed stats dashboard request rows for Judge and other role-model calls so they open correctly and display usage details.
+- Fixed stats and summary error-rate formatting so small nonzero percentages are displayed accurately instead of as 0.0%.
+- Fixed a visual fringe on the edges of the stats dashboard’s “Classify with judge” button.
+
 ## [18.4.4] - 2026-09-29
 
 ### Added

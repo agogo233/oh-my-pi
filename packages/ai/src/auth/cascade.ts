@@ -1,14 +1,22 @@
 import { authPolicyFor } from "@oh-my-pi/pi-catalog/compat/auth";
 import { $env, $envExact } from "@oh-my-pi/pi-utils";
 import { type ApiKeyResolver, markAfterSiblingWait, type ResolvedApiKey } from "../auth-retry";
+import { getEnvApiKey, getEnvApiKeyName } from "../env-api-key";
 import * as AIError from "../error";
 import { isUsageLimitOutcome } from "../error/rate-limit";
 import { AUTHENTICATED_SENTINEL } from "../registry/types";
-import { getEnvApiKey, getEnvApiKeyName } from "../stream";
 import type { SessionAffinity } from "./affinity";
 import type { CredentialPool } from "./pool";
 import type { CredentialSelector } from "./select";
-import type { AuthApiKeyOptions, AuthCredential, AuthSource, AuthSourceOptions, KeysApi, LimitsApi } from "./types";
+import type {
+	AuthApiKeyOptions,
+	AuthCredential,
+	AuthSource,
+	AuthSourceOptions,
+	KeysApi,
+	LimitsApi,
+	OAuthRequestIdentity,
+} from "./types";
 
 /**
  * Default config value resolver that checks env vars and treats as literal.
@@ -296,10 +304,12 @@ export class KeyCascade implements KeysApi {
 		options?: AuthApiKeyOptions,
 	): Promise<ResolvedApiKey | undefined> {
 		let credentialId: number | undefined;
-		const apiKey = await this.get(provider, sessionId, options, id => {
+		let oauthIdentity: OAuthRequestIdentity | undefined;
+		const apiKey = await this.get(provider, sessionId, options, (id, identity) => {
 			credentialId = id;
+			oauthIdentity = identity;
 		});
-		return apiKey === undefined ? undefined : { apiKey, credentialId };
+		return apiKey === undefined ? undefined : { apiKey, credentialId, ...(oauthIdentity ? { oauthIdentity } : {}) };
 	}
 
 	/**
@@ -311,7 +321,7 @@ export class KeyCascade implements KeysApi {
 		provider: string,
 		sessionId?: string,
 		options?: AuthApiKeyOptions,
-		onCredentialId?: (id: number) => void,
+		onCredentialId?: (id: number, identity?: OAuthRequestIdentity) => void,
 	): Promise<string | undefined> {
 		// Runtime override takes highest priority
 		const runtimeKey = this.#deps.overrides.runtimeKey(provider);
@@ -333,7 +343,10 @@ export class KeyCascade implements KeysApi {
 		// then a stored static api_key (which may be a stale broker-migrated copy) as a last resort.
 		const oauthResolved = await this.#deps.selector.resolveOAuth(provider, sessionId, options);
 		if (oauthResolved) {
-			if (oauthResolved.credentialId !== undefined) onCredentialId?.(oauthResolved.credentialId);
+			if (onCredentialId && oauthResolved.credentialId !== undefined) {
+				const { orgId, region, inferenceRegion } = oauthResolved.credential;
+				onCredentialId(oauthResolved.credentialId, { orgId, region, inferenceRegion });
+			}
 			return oauthResolved.apiKey;
 		}
 		const loginApiKeySelection = await this.#deps.selector.selectApiKey(
@@ -343,7 +356,9 @@ export class KeyCascade implements KeysApi {
 			credential => credential.source === "login" && !this.isKeylessFallback(provider, credential),
 		);
 		if (loginApiKeySelection) {
-			this.#deps.affinity.record(provider, sessionId, "api_key", loginApiKeySelection.index);
+			if (options?.recordAffinity !== false) {
+				this.#deps.affinity.record(provider, sessionId, "api_key", loginApiKeySelection.index);
+			}
 			const credentialId = onCredentialId
 				? this.#deps.pool.entries(provider)[loginApiKeySelection.index]?.id
 				: undefined;
@@ -369,7 +384,9 @@ export class KeyCascade implements KeysApi {
 			credential => credential.source !== "login",
 		);
 		if (apiKeySelection) {
-			this.#deps.affinity.record(provider, sessionId, "api_key", apiKeySelection.index);
+			if (options?.recordAffinity !== false) {
+				this.#deps.affinity.record(provider, sessionId, "api_key", apiKeySelection.index);
+			}
 			const credentialId = onCredentialId ? this.#deps.pool.entries(provider)[apiKeySelection.index]?.id : undefined;
 			const apiKey = await this.#deps.overrides.resolve(apiKeySelection.credential.key);
 			if (apiKey !== undefined && credentialId !== undefined) onCredentialId?.(credentialId);
